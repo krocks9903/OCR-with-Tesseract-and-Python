@@ -1,72 +1,51 @@
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageFilter, ImageOps, ImageDraw
 import pytesseract
-import cv2
-import numpy as np
+from pytesseract import Output
 import re
+import matplotlib.pyplot as plt
 
-# Set path to Tesseract (Windows)
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Load image
+image_path = "JC.jpg"
+img = Image.open(image_path)
 
-# Load and preprocess image
-image = Image.open("fld.png").convert("L")
-image = ImageEnhance.Contrast(image).enhance(2.5)
-open_cv_image = np.array(image)
+# --- Image Preprocessing ---
+img = img.convert("L")  # Convert to grayscale
+img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=150))  # Sharpen
+img = img.point(lambda x: 255 if x > 140 else 0, mode='1')  # Binarize
+img = img.resize((img.width * 2, img.height * 2))  # Upscale for better OCR
 
-# Thresholding
-_, thresh = cv2.threshold(open_cv_image, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+# --- Run OCR and get word-level data ---
+ocr_data = pytesseract.image_to_data(img, config='--psm 6', output_type=Output.DICT)
+ocr_text = pytesseract.image_to_string(img, config='--psm 6')
 
-# Resize
-scaled = cv2.resize(thresh, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+# --- Extract DLN, Name, Address using regex ---
+dln_match = re.search(r'\b[S|W]?\d{3}-\d{3}-\d{2}-\d{3}-?\d?\b', ocr_text)
+name_match = re.search(r'([A-Z]+)\s+([A-Z]+)', ocr_text)
+address_match = re.search(r'(\d+\s+.+\s+TALLAHASSEE,\s*FL.*?)\n', ocr_text, re.IGNORECASE)
 
-# OCR with custom config
-raw_text = pytesseract.image_to_string(scaled, config="--psm 6")
+dln = dln_match.group(0) if dln_match else "Not found"
+name = f"{name_match.group(1).title()} {name_match.group(2).title()}" if name_match else "Not found"
+address = address_match.group(1).title() if address_match else "Not found"
 
-print("Full OCR Text:\n")
-print(raw_text)
+# --- Print Extracted Info ---
+print("\n--- OCR Results ---")
+print(f"DLN: {dln}")
+print(f"Name: {name}")
+print(f"Address: {address}")
 
-# Save full text for reference
-with open("fld_extracted_text.txt", "w", encoding="utf-8") as f:
-    f.write(raw_text)
+# --- Draw bounding boxes on words with > 50% confidence ---
+img_with_boxes = img.convert("RGB")
+draw = ImageDraw.Draw(img_with_boxes)
 
-# --- Field Extraction ---
-fields = {}
+for i in range(len(ocr_data['text'])):
+    try:
+        if float(ocr_data['conf'][i]) > 50:
+            x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
+            draw.rectangle([x, y, x + w, y + h], outline="red", width=2)
+    except ValueError:
+        continue
 
-# DLN (Driver License Number)
-dln_match = re.search(r'S\d{3}[- ]?\d{3}[- ]?\d{2}[- ]?\d{3}[- ]?\d?', raw_text)
-fields["DLN"] = dln_match.group(0) if dln_match else "Not found"
-
-# Name
-name_match = re.search(r'SAMPLE\s*\nNICK', raw_text, re.IGNORECASE)
-fields["Name"] = "NICK SAMPLE" if name_match else "Not found"
-
-# Address
-addr_match = re.search(r'123 MAIN.*TALLAHASSEE.*', raw_text, re.IGNORECASE)
-fields["Address"] = addr_match.group(0) if addr_match else "Not found"
-
-# DOB
-dob_match = re.search(r'0[1-9]/[0-3][0-9]/19[0-9]{2}', raw_text)
-fields["DOB"] = dob_match.group(0) if dob_match else "Not found"
-
-# EXP (Expiration Date)
-exp_match = re.search(r'EXP.*?(\d{2}/\d{2}/\d{4})', raw_text)
-fields["EXP"] = exp_match.group(1) if exp_match else "Not found"
-
-# SEX
-sex_match = re.search(r'SEX[: ]*([MF])', raw_text)
-fields["SEX"] = sex_match.group(1) if sex_match else "Not found"
-
-# HEIGHT
-height_match = re.search(r'HEIGHT[: ]*(\d[\'’][0-9]{1,2})', raw_text)
-fields["Height"] = height_match.group(1) if height_match else "Not found"
-
-# Safe Driver Date
-safe_driver_match = re.search(r'SAFE DRIVER\s+(\d{2}/\d{2}/\d{4})', raw_text)
-fields["Safe Driver Since"] = safe_driver_match.group(1) if safe_driver_match else "Not found"
-
-# --- Output Results ---
-print("\n--- Extracted Fields ---")
-for key, value in fields.items():
-    print(f"{key}: {value}")
-
-# Save boxed image for visual debugging
-cv2.imwrite("fld_processed.png", scaled)
+# --- Save output image ---
+output_path = "ID_bounding_boxes_saved.png"
+img_with_boxes.save(output_path)
+print(f"\n✅ Saved: {output_path}")
