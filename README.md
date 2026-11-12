@@ -1,6 +1,8 @@
 # OCR-with-Tesseract-and-Python
 
-This project is an AI-powered OCR tool that extracts key information (e.g., Name, Date of Birth, ID Number) from scanned images of passports and driver's licenses and stores them in a structured database.
+Extracts the licence number, name and address from a scanned driver's licence image using Tesseract OCR, image preprocessing and regular expressions.
+
+> **Status:** single-script prototype (`ocr_script.py`), tuned on one sample Florida licence image (`fld.png`). It prints the extracted fields to the console and saves an image with word bounding boxes. It does not write JSON, CSV or a database yet, and it has not been tested on passports. The sections below describe the design and where it is headed; items marked *planned* are not implemented.
 
 ---
 
@@ -14,14 +16,14 @@ OCR-with-Tesseract-and-Python is a Python-based optical character recognition (O
 
 - Extracts fields such as:
   - Full Name
-  - Date of Birth (DOB)
+  - Date of Birth (DOB) *(planned)*
   - ID Number / Driver License Number (DLN)
   - Address
-- Supports multiple image formats (PNG, JPG, TIFF)
+- Reads any image format Pillow can open (tested with PNG)
 - Applies image preprocessing to improve OCR accuracy
 - Field-specific cropping for better performance
-- Outputs structured data (JSON, CSV)
-- Easily extendable for new ID formats
+- Structured output (JSON, CSV) *(planned; currently prints to console)*
+- New ID formats need new regex patterns and crop regions
 
 ---
 
@@ -50,6 +52,8 @@ OCR-with-Tesseract-and-Python is a Python-based optical character recognition (O
 ---
 
 ## Example Output
+
+Target output format. The script currently prints the DLN, name and address fields as plain text.
 
 ```json
 {
