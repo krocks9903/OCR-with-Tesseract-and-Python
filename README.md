@@ -2,7 +2,7 @@
 
 Extracts the licence number, name and address from a scanned driver's licence image using Tesseract OCR, image preprocessing and regular expressions.
 
-> **Status:** single-script prototype (`ocr_script.py`), tuned on one sample Florida licence image (`fld.png`). It prints the extracted fields to the console and saves an image with word bounding boxes. It does not write JSON, CSV or a database yet, and it has not been tested on passports. The sections below describe the design and where it is headed; items marked *planned* are not implemented.
+> **Status:** single-script prototype (`ocr_script.py`). By default it reads `JC.jpg`, which is not in this repo, so pass an image path: `python ocr_script.py fld.png` runs on the included sample Florida licence, though some fields come out wrong on it. It prints the extracted fields to the console and saves an image with word bounding boxes. It does not write JSON, CSV or a database yet, and it has not been tested on passports. The sections below describe the design and where it is headed; items marked *planned* are not implemented.
 
 ---
 

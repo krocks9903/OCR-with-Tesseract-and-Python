@@ -1,11 +1,15 @@
 from PIL import Image, ImageFilter, ImageOps, ImageDraw
 import pytesseract
 from pytesseract import Output
+import os
 import re
+import sys
 import matplotlib.pyplot as plt
 
-# Load image
-image_path = "JC.jpg"
+# Load image: path from the command line, otherwise JC.jpg (not included in the repo)
+image_path = sys.argv[1] if len(sys.argv) > 1 else "JC.jpg"
+if not os.path.isfile(image_path):
+    sys.exit(f"Image not found: {image_path}\nUsage: python ocr_script.py [path/to/licence_image]")
 img = Image.open(image_path)
 
 # --- Image Preprocessing ---
